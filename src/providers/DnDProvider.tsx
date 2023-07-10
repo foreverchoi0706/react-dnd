@@ -4,7 +4,6 @@ import {
   Children,
   cloneElement,
   DragEvent,
-  isValidElement,
   HTMLAttributes,
   ReactElement,
   useState,
@@ -19,31 +18,30 @@ const DnDProvider: FC<PropsWithChildren<DnDProviderProps>> = ({
   onDragEnd,
 }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [draggedOffsetY, setDraggedOffsetY] = useState<number | null>(null);
 
   const addDraggableAttribute = (child: ReactElement, index: number) =>
     cloneElement(child, {
       draggable: true,
-      onDragStart: ({ clientY }: DragEvent<HTMLAttributes<HTMLElement>>) => {
-        setDraggedOffsetY(clientY);
-        setDraggedIndex(index);
+      id: index,
+      styles: {
+        cursor: "grabbing",
       },
-      onDragEnd: () => {
-        setDraggedIndex(null);
-        setDraggedOffsetY(null);
-      },
+      onDragStart: () => setDraggedIndex(index),
+      onDragEnd: () => setDraggedIndex(null),
       onDragOver: (e: DragEvent<HTMLAttributes<HTMLElement>>) => {
         e.preventDefault();
       },
       onDrop: (e: DragEvent<HTMLAttributes<HTMLElement>>) => {
         e.preventDefault();
-        if (draggedIndex === null || draggedOffsetY === null) return;
+        if (draggedIndex === null) return;
+        console.log(children);
 
         const newItems = Children.map(
-          children,
+          children as ReactElement<unknown>,
           ({ props }) => props.children.props
         );
         if (!newItems) return;
+
         const droppedItem = newItems.splice(draggedIndex, 1)[0];
         newItems.splice(index, 0, droppedItem);
         onDragEnd(newItems);
@@ -51,8 +49,8 @@ const DnDProvider: FC<PropsWithChildren<DnDProviderProps>> = ({
     });
 
   if (!children || typeof children === "object") {
-    const modifiedChildren = Children.map<ReactElement[], ReactElement>(
-      children,
+    const modifiedChildren = Children.map(
+      children as ReactElement,
       addDraggableAttribute
     );
 

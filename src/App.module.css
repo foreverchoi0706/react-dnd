@@ -5,6 +5,7 @@ body {
 }
 
 .card_list {
+  touch-action: none;
   max-width: 560px;
   margin: 0 auto;
   background: ghostwhite;
@@ -26,6 +27,14 @@ body {
     gap: 20px;
     &::-webkit-scrollbar {
       display: none;
+    }
+    & .card_list_item {
+      cursor: grab;
+      user-select: none;
+    }
+    & .card_list_item_dragged {
+      pointer-events: none;
+      touch-action: none;
     }
   }
   & .card_list_spinner_warp {
