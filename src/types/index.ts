@@ -4,3 +4,5 @@ export interface TCardData {
     desc: string;
     cardLogoURL: string;
 }
+
+export type DragAndDropHandler = (dragIndex: number, dropIndex: number) => void;

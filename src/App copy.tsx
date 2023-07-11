@@ -1,64 +1,37 @@
-import {
-  FC,
-  PropsWithChildren,
-  HTMLAttributes,
-  useRef,
-  useReducer,
-  createContext,
-  useEffect,
-  Dispatch,
-  useContext,
-  PointerEvent,
-} from "react";
-import { DragAndDropHandler } from "../../types";
+import { useState, FC, PointerEvent, useRef } from "react";
+import cardListData from "./data";
+import { TCardData } from "./types";
 
-interface IDnDContext {
-  dragStart?: (e: PointerEvent<HTMLLIElement>, index: number) => void;
-  dispatch: Dispatch<number> | null;
-}
+const App: FC = () => {
+  const [cardList, setCardList] = useState<TCardData[]>(cardListData);
+  const [isDragging, setIsDragging] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-const DnDContext = createContext<IDnDContext>({
-  dragStart: undefined,
-  dispatch: null,
-});
-
-const reducer = (state: number[], payload: number) => {
-  return state.concat(payload);
-};
-
-export const Container: FC<
-  PropsWithChildren<
-    HTMLAttributes<HTMLUListElement> & {
-      onDragAndDrop: DragAndDropHandler;
-    }
-  >
-> = ({ children, onDragAndDrop, ...rest }) => {
-  const refComtainer = useRef<HTMLUListElement>(null);
-  const [indexList, dispatch] = useReducer(reducer, []);
-
-  console.log(indexList);
-
-  const dragStart = (e: PointerEvent<HTMLLIElement>, index: number) => {
-    const container = refComtainer.current;
+  const dragStart = (e: PointerEvent<HTMLDivElement>, index: number) => {
+    const container = containerRef.current;
     if (container === null || e.buttons !== 1) return;
 
+    setIsDragging(index);
+
     const items = [...container.childNodes] as HTMLElement[];
-    // move the elements below dragItem.
     const itemsBelowDragItem = items.slice(index + 1);
     const dragItem = items[index];
     const noDragItems = items.filter((_, i) => i !== index);
-    const dragIndex = indexList[index];
+    const dragData = cardList[index];
+
+    console.log(dragItem);
+    console.log(dragItem);
 
     // getBoundingClientRect of dragItem
     const dragBoundingRect = dragItem.getBoundingClientRect();
-
+    // distance between two card
     const space =
       items[1].getBoundingClientRect().top -
       items[0].getBoundingClientRect().bottom;
-
+    // move the elements below dragItem.
     // distance to be moved.
-    // distance between two card
     const distance = dragBoundingRect.height + space;
+    let nextCardList = cardList;
 
     // set style for dragItem when mouse down
     dragItem.style.position = "fixed";
@@ -111,6 +84,11 @@ export const Container: FC<
           noDragItem.style.transform = `translateY(${distance}px)`;
           index--;
         }
+        // Swap Data
+        nextCardList = cardList.filter(
+          ({ cardId }) => cardId !== dragData.cardId
+        );
+        nextCardList.splice(index, 0, dragData);
       });
     };
     // perform the function on hover.
@@ -119,6 +97,7 @@ export const Container: FC<
     window.document.onpointerup = () => {
       window.document.onpointerup = null;
       window.document.onpointermove = null;
+
       dragItem.style.position = "";
       dragItem.style.zIndex = "";
       dragItem.style.cursor = "";
@@ -126,37 +105,33 @@ export const Container: FC<
       dragItem.style.height = "";
       dragItem.style.top = "";
       dragItem.style.left = "";
+
       container?.removeChild(tempArea);
+
       items.forEach(({ style }) => (style.transform = ""));
-      onDragAndDrop(dragIndex, index);
+
+      setIsDragging(null);
+      setCardList(nextCardList);
     };
   };
 
   return (
-    <DnDContext.Provider value={{ dispatch, dragStart }}>
-      <ul ref={refComtainer} {...rest}>
-        {children}
-      </ul>
-    </DnDContext.Provider>
+    <div className="container" ref={containerRef}>
+      {cardList.map((item, index) => (
+        <div key={item.cardId} onPointerDown={(e) => dragStart(e, index)}>
+          <div className={`card ${isDragging === index ? "dragging" : ""}`}>
+            <div className="img-container">
+              <img src={item.cardLogoURL} alt="cardLogo" />
+            </div>
+            <div className="box">
+              <h4>{item.title}</h4>
+              <h2>{item.desc}</h2>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 };
 
-export const Element: FC<
-  PropsWithChildren<HTMLAttributes<HTMLLIElement> & { index: number }>
-> = ({ children, ...rest }) => {
-  const { dispatch, dragStart } = useContext(DnDContext);
-
-  useEffect(() => {
-    if (dispatch === null) return;
-    dispatch(rest.index);
-  }, []);
-
-  return (
-    <li
-      onPointerDown={dragStart ? (e) => dragStart(e, rest.index) : undefined}
-      {...rest}
-    >
-      {children}
-    </li>
-  );
-};
+export default App;
