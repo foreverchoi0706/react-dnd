@@ -11,6 +11,7 @@ import {
   PointerEvent,
 } from "react";
 import { DragAndDropHandler } from "../../types";
+import styles from "./index.module.css";
 
 interface IDnDContext {
   dragStart?: (e: PointerEvent<HTMLLIElement>, index: number) => void;
@@ -22,11 +23,9 @@ const DnDContext = createContext<IDnDContext>({
   dispatch: null,
 });
 
-const reducer = (state: number[], payload: number) => {
-  return state.concat(payload);
-};
+const reducer = (state: number[], payload: number) => state.concat(payload);
 
-export const Container: FC<
+const Container: FC<
   PropsWithChildren<
     HTMLAttributes<HTMLUListElement> & {
       onDragAndDrop: DragAndDropHandler;
@@ -36,8 +35,7 @@ export const Container: FC<
   const refComtainer = useRef<HTMLUListElement>(null);
   const [indexList, dispatch] = useReducer(reducer, []);
 
-  console.log(indexList);
-
+  //드래그시작
   const dragStart = (e: PointerEvent<HTMLLIElement>, index: number) => {
     const container = refComtainer.current;
     if (container === null || e.buttons !== 1) return;
@@ -85,6 +83,7 @@ export const Container: FC<
     const x = e.clientX;
     const y = e.clientY;
 
+    //드래그중
     window.document.onpointermove = (e) => {
       // Calculate the distance the mouse pointer has traveled.
       // original coordinates minus current coordinates.
@@ -98,12 +97,12 @@ export const Container: FC<
         const dragItemRect = dragItem.getBoundingClientRect();
         const noDragItemRect = noDragItem.getBoundingClientRect();
 
-        const isOverlapping =
+        const isOverlap =
           dragItemRect.y < noDragItemRect.y + noDragItemRect.height / 2 &&
           dragItemRect.y + noDragItemRect.height / 2 > noDragItemRect.y;
 
-        if (!isOverlapping) return;
-        // Swap Position Card
+        if (!isOverlap) return;
+        //겹처진아이템위치변경
         if (noDragItem.getAttribute("style")) {
           noDragItem.style.transform = "";
           index++;
@@ -113,9 +112,8 @@ export const Container: FC<
         }
       });
     };
-    // perform the function on hover.
 
-    // finish onPointerDown event
+    //드래그끝남
     window.document.onpointerup = () => {
       window.document.onpointerup = null;
       window.document.onpointermove = null;
@@ -134,14 +132,14 @@ export const Container: FC<
 
   return (
     <DnDContext.Provider value={{ dispatch, dragStart }}>
-      <ul ref={refComtainer} {...rest}>
+      <ul className={styles.dnd_container} ref={refComtainer} {...rest}>
         {children}
       </ul>
     </DnDContext.Provider>
   );
 };
 
-export const Element: FC<
+const Element: FC<
   PropsWithChildren<HTMLAttributes<HTMLLIElement> & { index: number }>
 > = ({ children, ...rest }) => {
   const { dispatch, dragStart } = useContext(DnDContext);
@@ -160,3 +158,10 @@ export const Element: FC<
     </li>
   );
 };
+
+const DnD = {
+  Container,
+  Element,
+};
+
+export default DnD;
