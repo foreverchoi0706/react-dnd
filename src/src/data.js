@@ -23,5 +23,5 @@ export const available = [
     id: 5,
     title: "Morbi sagittis tellus a efficitur",
     subtitle: "Etiam mollis eros eget mi.",
-  }
-]
+  },
+];

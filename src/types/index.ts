@@ -1,4 +1,4 @@
-export interface CardData {
+export interface TCardData {
     cardId: number;
     title: string;
     desc: string;

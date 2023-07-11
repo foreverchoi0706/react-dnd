@@ -1,173 +1,136 @@
-import { FC, useEffect, useRef, useState, PointerEvent } from "react";
-import Button from "./components/Button";
-import Card from "./components/Card";
-import Spinner from "./components/Spinner";
-import styles from "./App.module.css";
-import { CardData } from "./types";
-import data from "./data";
+import { useState, FC, PointerEvent, useRef } from "react";
+import cardListData from "./data";
+import { TCardData } from "./types";
 
 const App: FC = () => {
-  const [cardlist, setCardList] = useState<CardData[]>([]);
-  const [isListLoaded, setIsListLoaded] = useState<boolean>(false);
-  const [isEditMode, setIsEditMode] = useState<boolean>(false);
-  const [isDraggedIndex, setIsDraggedIndex] = useState<number | null>(null);
-  const refContianer = useRef<HTMLUListElement>(null);
+  const [cardList, setCardList] = useState<TCardData[]>(cardListData);
+  const [isDragging, setIsDragging] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleTouchStart = (e: PointerEvent<HTMLLIElement>, index: number) => {
-    const container = refContianer.current;
-    if (container === null || e.buttons !== 1) return; // only use left mouse click;
+  const dragStart = (e: PointerEvent<HTMLDivElement>, index: number) => {
+    const container = containerRef.current;
+    if (container === null || e.buttons !== 1) return;
+
+    setIsDragging(index);
 
     const items = [...container.childNodes] as HTMLElement[];
-    const dragItem = items[index];
     const itemsBelowDragItem = items.slice(index + 1);
-    const notDragItems = items.filter((_, i) => i !== index);
-    const dragData = data[index];
-    let newData = [...data];
+    const dragItem = items[index];
+    const noDragItems = items.filter((_, i) => i !== index);
+    const dragData = cardList[index];
+
+    console.log(dragItem);
+    console.log(dragItem);
 
     // getBoundingClientRect of dragItem
     const dragBoundingRect = dragItem.getBoundingClientRect();
-
     // distance between two card
     const space =
       items[1].getBoundingClientRect().top -
       items[0].getBoundingClientRect().bottom;
+    // move the elements below dragItem.
+    // distance to be moved.
+    const distance = dragBoundingRect.height + space;
+    let nextCardList = cardList;
 
     // set style for dragItem when mouse down
     dragItem.style.position = "fixed";
-    dragItem.style.zIndex = "5000";
+    dragItem.style.zIndex = "999999";
     dragItem.style.width = `${dragBoundingRect.width}px`;
     dragItem.style.height = `${dragBoundingRect.height}px`;
     dragItem.style.top = `${dragBoundingRect.top}px`;
     dragItem.style.left = `${dragBoundingRect.left}px`;
+    dragItem.style.cursor = "grabbing";
 
     // create alternate div element when dragItem position is fixed
-    const div = document.createElement("div");
-    div.id = "div-temp";
-    div.style.width = `${dragBoundingRect.width}px`;
-    div.style.height = `${dragBoundingRect.height}px`;
-    div.style.pointerEvents = "none";
-    container.appendChild(div);
+    const tempArea = window.document.createElement("div");
+    tempArea.id = "temp-area";
+    tempArea.style.width = `${dragBoundingRect.width}px`;
+    tempArea.style.height = `${dragBoundingRect.height}px`;
+    tempArea.style.pointerEvents = "none";
+    container.appendChild(tempArea);
 
-    // move the elements below dragItem.
-    // distance to be moved.
-    const distance = dragBoundingRect.height + space;
-
-    itemsBelowDragItem.forEach((item) => {
-      item.style.transform = `translateY(${distance}px)`;
+    itemsBelowDragItem.forEach(({ style }) => {
+      style.transform = `translateY(${distance}px)`;
     });
 
     // get the original coordinates of the mouse pointer
     const x = e.clientX;
     const y = e.clientY;
 
-    // perform the function on hover.
-    document.onpointermove = dragMove;
-
-    function dragMove(e) {
+    window.document.onpointermove = (e) => {
       // Calculate the distance the mouse pointer has traveled.
       // original coordinates minus current coordinates.
       const posX = e.clientX - x;
       const posY = e.clientY - y;
-
       // Move Item
       dragItem.style.transform = `translate(${posX}px, ${posY}px)`;
-
       // swap position and data
-      notDragItems.forEach((item) => {
+      noDragItems.forEach((noDragItem) => {
         // check two elements is overlapping.
-        const rect1 = dragItem.getBoundingClientRect();
-        const rect2 = item.getBoundingClientRect();
+        const dragItemRect = dragItem.getBoundingClientRect();
+        const noDragItemRect = noDragItem.getBoundingClientRect();
 
         const isOverlapping =
-          rect1.y < rect2.y + rect2.height / 2 &&
-          rect1.y + rect1.height / 2 > rect2.y;
+          dragItemRect.y < noDragItemRect.y + noDragItemRect.height / 2 &&
+          dragItemRect.y + noDragItemRect.height / 2 > noDragItemRect.y;
 
-        if (isOverlapping) {
-          // Swap Position Card
-          if (item.getAttribute("style")) {
-            item.style.transform = "";
-            index++;
-          } else {
-            item.style.transform = `translateY(${distance}px)`;
-            index--;
-          }
-
-          // Swap Data
-          newData = data.filter((item) => item.id !== dragData.id);
-          newData.splice(index, 0, dragData);
+        if (!isOverlapping) return;
+        // Swap Position Card
+        if (noDragItem.getAttribute("style")) {
+          noDragItem.style.transform = "";
+          index++;
+        } else {
+          noDragItem.style.transform = `translateY(${distance}px)`;
+          index--;
         }
+        // Swap Data
+        nextCardList = cardList.filter(
+          ({ cardId }) => cardId !== dragData.cardId
+        );
+        nextCardList.splice(index, 0, dragData);
       });
-    }
+    };
+    // perform the function on hover.
 
     // finish onPointerDown event
-    document.onpointerup = dragEnd;
-
-    function dragEnd() {
+    window.document.onpointerup = () => {
       window.document.onpointerup = null;
       window.document.onpointermove = null;
 
-      dragItem.style = "";
-      container?.removeChild(div);
+      dragItem.style.position = "";
+      dragItem.style.zIndex = "";
+      dragItem.style.cursor = "";
+      dragItem.style.width = "";
+      dragItem.style.height = "";
+      dragItem.style.top = "";
+      dragItem.style.left = "";
 
-      items.forEach((item) => (item.style = ""));
+      container?.removeChild(tempArea);
 
-      setIsDraggedIndex(null);
-    }
+      items.forEach(({ style }) => (style.transform = ""));
+
+      setIsDragging(null);
+      setCardList(nextCardList);
+    };
   };
 
-  useEffect(() => {
-    // fetch("/api/recruit/get/list", {
-    //   method: "POST",
-    //   headers: {
-    //     Authorization: "Nakdajdjdkjd0ak202kn",
-    //     "Content-type": "application/json",
-    //   },
-    // })
-    //   .then((res) => {
-    //     return res.json();
-    //   })
-    //   .then((res) => {
-    //     console.log(res);
-    //   })
-    //   .catch((error) => console.error(error))
-    //   .finally(() => setIsListLoaded(true));
-
-    new Promise((resolve) =>
-      setTimeout(() => {
-        setCardList(data);
-        resolve(true);
-      }, 1000)
-    )
-      .catch((error) => console.error(error))
-      .finally(() => setIsListLoaded(true));
-  }, []);
-
   return (
-    <main className={styles.card_list}>
-      <h1 className={styles.card_list_title}>멤버쉽 카드 지갑</h1>
-      {isListLoaded ? (
-        <ul ref={refContianer} className={styles.card_list_warp}>
-          {cardlist.map((card, index) => (
-            <li
-              className={`${styles.card_list_item} ${
-                isDraggedIndex === index ? styles.card_list_item_dragged : ""
-              }`}
-              onPointerDown={(e) => handleTouchStart(e, index)}
-              key={card.cardId}
-            >
-              <Card {...card} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className={styles.card_list_spinner_warp}>
-          <Spinner />
+    <div className="container" ref={containerRef}>
+      {cardList.map((item, index) => (
+        <div key={item.cardId} onPointerDown={(e) => dragStart(e, index)}>
+          <div className={`card ${isDragging === index ? "dragging" : ""}`}>
+            <div className="img-container">
+              <img src={item.cardLogoURL} alt="cardLogo" />
+            </div>
+            <div className="box">
+              <h4>{item.title}</h4>
+              <h2>{item.desc}</h2>
+            </div>
+          </div>
         </div>
-      )}
-      <Button onClick={() => setIsEditMode((prevState) => !prevState)}>
-        {isEditMode ? "변경 완료" : "순서 변경"}
-      </Button>
-    </main>
+      ))}
+    </div>
   );
 };
 
