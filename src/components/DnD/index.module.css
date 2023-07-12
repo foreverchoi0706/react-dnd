@@ -1,4 +1,8 @@
 .dnd_container {
+  height: 100%;
   touch-action: none;
-  -ms-touch-action: none;
+  overflow-y: scroll;
+}
+.dnd_container::-webkit-scrollbar {
+  display: none;
 }

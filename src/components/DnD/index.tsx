@@ -6,34 +6,26 @@ import {
   useReducer,
   createContext,
   useEffect,
-  Dispatch,
   useContext,
   PointerEvent,
 } from "react";
-import { DragAndDropHandler } from "../../types";
+import { DnDContext, DragAndDropHandler } from "../../types";
 import styles from "./index.module.css";
 
-interface IDnDContext {
-  dragStart?: (e: PointerEvent<HTMLLIElement>, index: number) => void;
-  dispatch: Dispatch<number> | null;
-}
+const DnDContext = createContext<DnDContext>({});
 
-const DnDContext = createContext<IDnDContext>({
-  dragStart: undefined,
-  dispatch: null,
-});
-
-const reducer = (state: number[], payload: number) => state.concat(payload);
+const DnDreducer = (state: number[], payload: number) => state.concat(payload);
 
 const Container: FC<
   PropsWithChildren<
     HTMLAttributes<HTMLUListElement> & {
+      isDraggable?: boolean;
       onDragAndDrop: DragAndDropHandler;
     }
   >
-> = ({ children, onDragAndDrop, ...rest }) => {
+> = ({ children, isDraggable = true, onDragAndDrop, ...rest }) => {
   const refComtainer = useRef<HTMLUListElement>(null);
-  const [indexList, dispatch] = useReducer(reducer, []);
+  const [indexList, dispatch] = useReducer(DnDreducer, []);
 
   //드래그시작
   const dragStart = (e: PointerEvent<HTMLLIElement>, index: number) => {
@@ -47,18 +39,17 @@ const Container: FC<
     const noDragItems = items.filter((_, i) => i !== index);
     const dragIndex = indexList[index];
 
-    // getBoundingClientRect of dragItem
     const dragBoundingRect = dragItem.getBoundingClientRect();
 
+    //아이템간의거리
     const space =
       items[1].getBoundingClientRect().top -
       items[0].getBoundingClientRect().bottom;
 
-    // distance to be moved.
-    // distance between two card
+    //얼만큼이동할지거리
     const distance = dragBoundingRect.height + space;
 
-    // set style for dragItem when mouse down
+    //드래그된아이템스타일변경
     dragItem.style.position = "fixed";
     dragItem.style.zIndex = "999999";
     dragItem.style.width = `${dragBoundingRect.width}px`;
@@ -80,18 +71,26 @@ const Container: FC<
     });
 
     // get the original coordinates of the mouse pointer
-    const x = e.clientX;
-    const y = e.clientY;
 
     //드래그중
-    window.document.onpointermove = (e) => {
-      // Calculate the distance the mouse pointer has traveled.
-      // original coordinates minus current coordinates.
-      const posX = e.clientX - x;
-      const posY = e.clientY - y;
-      // Move Item
-      dragItem.style.transform = `translate(${posX}px, ${posY}px)`;
-      // swap position and data
+    window.document.onpointermove = ({ clientX, clientY }) => {
+      //자동스크롤기능
+      const isOverFloor =
+        clientY > container.clientHeight - dragItem.clientHeight; //container바닥에닿았을때
+      const isOverCeil = clientY < container.offsetTop + dragItem.clientHeight; //container천장에닿았을때
+
+      if (isOverFloor || isOverCeil) {
+        const nextIndex = isOverFloor ? index + 1 : index - 1;
+        items[nextIndex]?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+      //아이템따라다니게
+      dragItem.style.transform = `translate(${clientX - e.clientX}px, ${
+        clientY - e.clientY
+      }px)`;
+      //겹친아이템감지
       noDragItems.forEach((noDragItem) => {
         // check two elements is overlapping.
         const dragItemRect = dragItem.getBoundingClientRect();
@@ -102,7 +101,7 @@ const Container: FC<
           dragItemRect.y + noDragItemRect.height / 2 > noDragItemRect.y;
 
         if (!isOverlap) return;
-        //겹처진아이템위치변경
+        //겹친아이템위치저장
         if (noDragItem.getAttribute("style")) {
           noDragItem.style.transform = "";
           index++;
@@ -112,8 +111,7 @@ const Container: FC<
         }
       });
     };
-
-    //드래그끝남
+    //드래그끝
     window.document.onpointerup = () => {
       window.document.onpointerup = null;
       window.document.onpointermove = null;
@@ -131,7 +129,7 @@ const Container: FC<
   };
 
   return (
-    <DnDContext.Provider value={{ dispatch, dragStart }}>
+    <DnDContext.Provider value={isDraggable ? { dispatch, dragStart } : {}}>
       <ul className={styles.dnd_container} ref={refComtainer} {...rest}>
         {children}
       </ul>
@@ -145,9 +143,9 @@ const Element: FC<
   const { dispatch, dragStart } = useContext(DnDContext);
 
   useEffect(() => {
-    if (dispatch === null) return;
+    if (dispatch === undefined) return;
     dispatch(rest.index);
-  }, []);
+  }, [dispatch]);
 
   return (
     <li

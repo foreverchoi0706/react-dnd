@@ -1,6 +1,6 @@
 import { FC } from "react";
-import styles from "./index.module.css";
 import logo from "../../assets/react.svg";
+import styles from "./index.module.css";
 
 const Spinner: FC = () => {
   return (
