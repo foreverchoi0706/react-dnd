@@ -10,6 +10,8 @@ import {
 import { DnDContext, DragAndDropHandler } from "../../types";
 import styles from "./index.module.css";
 
+const SCROLL_SPEED = 5;
+
 const DnDContext = createContext<DnDContext>({});
 
 const Container: FC<
@@ -21,6 +23,7 @@ const Container: FC<
   >
 > = ({ children, isDraggable = true, onDragAndDrop, ...rest }) => {
   const refComtainer = useRef<HTMLUListElement>(null);
+  let scrollInterval: number | null = null;
 
   //드래그시작
   const handlePointerDown = (e: PointerEvent<HTMLLIElement>, index: number) => {
@@ -50,7 +53,7 @@ const Container: FC<
     dragItem.style.left = `${dragBoundingRect.left}px`;
     dragItem.style.cursor = "grabbing";
 
-    // create alternate div element when dragItem position is fixed
+    //아이템겹치지안도록임시영역생성
     const tempArea = window.document.createElement("div");
     tempArea.id = "temp-area";
     tempArea.style.width = `${dragBoundingRect.width}px`;
@@ -67,14 +70,22 @@ const Container: FC<
     window.document.onpointermove = ({ clientX, clientY }) => {
       //자동스크롤기능
       const isOverFloor =
-        clientY > container.clientHeight - dragItem.clientHeight; //container바닥에닿았을때
-      const isOverCeil = clientY < container.offsetTop + dragItem.clientHeight; //container천장에닿았을때
+        clientY > container.clientHeight - dragItem.clientHeight / 2; //container바닥에닿았을때
+      const isOverCeil =
+        clientY < container.offsetTop + dragItem.clientHeight / 2; //container천장에닿았을때
       if (isOverFloor || isOverCeil) {
-        const nextIndex = isOverFloor ? index + 1 : index - 1;
-        items[nextIndex]?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+        if (scrollInterval === null) {
+          scrollInterval = window.setInterval(() => {
+            container.scrollTop += isOverFloor
+              ? SCROLL_SPEED
+              : SCROLL_SPEED * -1;
+          }, 10);
+        }
+      } else {
+        if (scrollInterval !== null) {
+          window.clearInterval(scrollInterval);
+          scrollInterval = null;
+        }
       }
       //아이템따라다니게
       dragItem.style.transform = `translate(${clientX - e.clientX}px, ${
@@ -114,6 +125,10 @@ const Container: FC<
       container?.removeChild(tempArea);
       items.forEach(({ style }) => (style.transform = ""));
       onDragAndDrop(dragIndex, index);
+      if (scrollInterval !== null) {
+        window.clearInterval(scrollInterval);
+        scrollInterval = null;
+      }
     };
   };
   return (
@@ -127,7 +142,7 @@ const Container: FC<
 
 const Element: FC<
   PropsWithChildren<
-    Omit<HTMLAttributes<HTMLLIElement>, "id" | "onPointerDown"> & {
+    Omit<HTMLAttributes<HTMLLIElement>, "onPointerDown"> & {
       index: number;
     }
   >
@@ -135,7 +150,6 @@ const Element: FC<
   const { handlePointerDown } = useContext(DnDContext);
   return (
     <li
-      id="dnd-element"
       onPointerDown={
         handlePointerDown ? (e) => handlePointerDown(e, rest.index) : undefined
       }
