@@ -26,6 +26,7 @@ const Home: FC = () => {
         cardIdList,
       }),
     })
+      .then(() => alert("변경이 완료되었습니다."))
       .catch((error) => console.error(error))
       .finally(() => setIsSortable(false));
   };
@@ -72,7 +73,6 @@ const Home: FC = () => {
                 key={card.cardId}
                 index={index}
               >
-                {card.cardId}
                 <Card {...card} isSortable={isSortable} />
               </DnD.Element>
             ))}

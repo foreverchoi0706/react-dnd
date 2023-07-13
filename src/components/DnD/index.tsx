@@ -10,7 +10,7 @@ import {
 import { DnDContext, DragAndDropHandler } from "../../types";
 import styles from "./index.module.css";
 
-const SCROLL_SPEED = 5;
+const SCROLL_SPEED = 7;
 
 const DnDContext = createContext<DnDContext>({});
 
@@ -36,13 +36,11 @@ const Container: FC<
     const dragIndex = index; //드래그시작시의index기억
     const dragBoundingRect = dragItem.getBoundingClientRect();
 
-    //아이템간의거리
-    const space =
+    //아이템들이얼만큼이동할지거리
+    const distance =
+      dragBoundingRect.height +
       items[1].getBoundingClientRect().top -
       items[0].getBoundingClientRect().bottom;
-
-    //아이템들이얼만큼이동할지거리
-    const distance = dragBoundingRect.height + space;
 
     //드래그된아이템스타일변경
     dragItem.style.position = "fixed";

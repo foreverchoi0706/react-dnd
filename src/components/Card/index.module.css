@@ -1,6 +1,7 @@
 .card {
   display: flex;
   gap: 20px;
+  position: relative;
   pointer-events: none;
   letter-spacing: -0.5px;
   background-color: #ffffff;
@@ -13,17 +14,19 @@
 }
 .card_contents_wrap {
   display: flex;
+  flex-grow: 1;
   flex-direction: column;
 }
 .card_contents_wrap > .card_contents_title {
-  font-size: 16px;
-  margin-bottom: 10px;
+  font-size: 14px;
+  margin-bottom: 5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .card_contents_wrap > .card_contents_desc {
-  color: darkgray;
+  color: #c4c4c4;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -32,5 +35,7 @@
   flex-grow: 1;
 }
 .card_sortable_mark {
-  align-self: center;
+  position: absolute;
+  right: 0;
+  bottom: calc(50% - 16px);
 }
