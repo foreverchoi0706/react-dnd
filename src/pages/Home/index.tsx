@@ -3,18 +3,32 @@ import DnD from "../../components/DnD";
 import Button from "../../components//Button";
 import Spinner from "../../components/Spinner";
 import Card from "../../components/Card";
-import { CardData, DragAndDropHandler } from "../../types";
+import { CardData, Response, DragAndDropHandler } from "../../types";
 import styles from "./index.module.css";
-import cardListData from "../../data";
+
+const API_KEY = "Nakdajdjdkjd0ak202kn" as const;
 
 const Home: FC = () => {
   const [cardList, setCardList] = useState<CardData[]>([]);
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isDataLoaded, setDataIsLoaded] = useState<boolean>(false);
   const [isSortable, setIsSortable] = useState<boolean>(false);
 
-  const handleClick = () => setIsSortable(true);
+  const handleSortClick = () => {
+    const cardIdList = cardList.map(({ cardId }) => cardId);
 
-  const handleClick2 = () => setIsSortable(false);
+    fetch("/api/recruit/update/list", {
+      method: "POST",
+      headers: {
+        Authorization: API_KEY,
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify({
+        cardIdList,
+      }),
+    })
+      .catch((error) => console.error(error))
+      .finally(() => setIsSortable(false));
+  };
 
   const handleDragAndDrop = useCallback<DragAndDropHandler>(
     (dragIndex, dropIndex) => {
@@ -28,32 +42,38 @@ const Home: FC = () => {
   );
 
   useEffect(() => {
-    new Promise((resolve) =>
-      setTimeout(() => {
-        setCardList(cardListData);
-        resolve(true);
-      }, 1000)
-    )
+    fetch("/api/recruit/get/list", {
+      method: "POST",
+      headers: {
+        Authorization: "Nakdajdjdkjd0ak202kn",
+        "Content-type": "application/json",
+      },
+    })
+      .then((res) => res.json())
+      .then(({ data }: Response<{ cardList: CardData[] }>) =>
+        setCardList(data.cardList)
+      )
       .catch((error) => console.error(error))
-      .finally(() => setIsLoaded(true));
+      .finally(() => setDataIsLoaded(true));
   }, []);
 
   return (
     <main className={styles.home}>
       <h1 className={styles.home_title}>멤버십 지갑 목록 화면</h1>
       <div className={styles.home_contents_wrap}>
-        {isLoaded ? (
+        {isDataLoaded ? (
           <DnD.Container
             isDraggable={isSortable}
             onDragAndDrop={handleDragAndDrop}
           >
-            {cardList.map((item, index) => (
+            {cardList.map((card, index) => (
               <DnD.Element
                 className={styles.home_dnd_element}
-                key={item.cardId}
+                key={card.cardId}
                 index={index}
               >
-                <Card {...item} isSortable={isSortable} />
+                {card.cardId}
+                <Card {...card} isSortable={isSortable} />
               </DnD.Element>
             ))}
           </DnD.Container>
@@ -64,11 +84,16 @@ const Home: FC = () => {
         )}
       </div>
       {isSortable ? (
-        <Button isFull onClick={handleClick2}>
+        <Button type="button" isFull onClick={handleSortClick}>
           변경완료
         </Button>
       ) : (
-        <Button disabled={!isLoaded} isFull onClick={handleClick}>
+        <Button
+          type="button"
+          disabled={!isDataLoaded}
+          isFull
+          onClick={() => setIsSortable(true)}
+        >
           순서변경
         </Button>
       )}

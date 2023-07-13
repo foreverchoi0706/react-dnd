@@ -3,9 +3,7 @@ import {
   PropsWithChildren,
   HTMLAttributes,
   useRef,
-  useReducer,
   createContext,
-  useEffect,
   useContext,
   PointerEvent,
 } from "react";
@@ -13,8 +11,6 @@ import { DnDContext, DragAndDropHandler } from "../../types";
 import styles from "./index.module.css";
 
 const DnDContext = createContext<DnDContext>({});
-
-const DnDreducer = (state: number[], payload: number) => state.concat(payload);
 
 const Container: FC<
   PropsWithChildren<
@@ -25,20 +21,16 @@ const Container: FC<
   >
 > = ({ children, isDraggable = true, onDragAndDrop, ...rest }) => {
   const refComtainer = useRef<HTMLUListElement>(null);
-  const [indexList, dispatch] = useReducer(DnDreducer, []);
 
   //드래그시작
-  const dragStart = (e: PointerEvent<HTMLLIElement>, index: number) => {
+  const handlePointerDown = (e: PointerEvent<HTMLLIElement>, index: number) => {
     const container = refComtainer.current;
     if (container === null || e.buttons !== 1) return;
-
     const items = [...container.childNodes] as HTMLElement[];
-    // move the elements below dragItem.
-    const itemsBelowDragItem = items.slice(index + 1);
-    const dragItem = items[index];
     const noDragItems = items.filter((_, i) => i !== index);
-    const dragIndex = indexList[index];
-
+    const dragItem = items[index];
+    const dragItemBelowItems = items.slice(index + 1);
+    const dragIndex = index; //드래그시작시의index기억
     const dragBoundingRect = dragItem.getBoundingClientRect();
 
     //아이템간의거리
@@ -46,7 +38,7 @@ const Container: FC<
       items[1].getBoundingClientRect().top -
       items[0].getBoundingClientRect().bottom;
 
-    //얼만큼이동할지거리
+    //아이템들이얼만큼이동할지거리
     const distance = dragBoundingRect.height + space;
 
     //드래그된아이템스타일변경
@@ -66,11 +58,10 @@ const Container: FC<
     tempArea.style.pointerEvents = "none";
     container.appendChild(tempArea);
 
-    itemsBelowDragItem.forEach(({ style }) => {
+    //드래그아이템밑아이템들위치고정
+    dragItemBelowItems.forEach(({ style }) => {
       style.transform = `translateY(${distance}px)`;
     });
-
-    // get the original coordinates of the mouse pointer
 
     //드래그중
     window.document.onpointermove = ({ clientX, clientY }) => {
@@ -78,12 +69,11 @@ const Container: FC<
       const isOverFloor =
         clientY > container.clientHeight - dragItem.clientHeight; //container바닥에닿았을때
       const isOverCeil = clientY < container.offsetTop + dragItem.clientHeight; //container천장에닿았을때
-
       if (isOverFloor || isOverCeil) {
         const nextIndex = isOverFloor ? index + 1 : index - 1;
         items[nextIndex]?.scrollIntoView({
           behavior: "smooth",
-          block: "start",
+          block: "center",
         });
       }
       //아이템따라다니게
@@ -92,7 +82,6 @@ const Container: FC<
       }px)`;
       //겹친아이템감지
       noDragItems.forEach((noDragItem) => {
-        // check two elements is overlapping.
         const dragItemRect = dragItem.getBoundingClientRect();
         const noDragItemRect = noDragItem.getBoundingClientRect();
 
@@ -127,9 +116,8 @@ const Container: FC<
       onDragAndDrop(dragIndex, index);
     };
   };
-
   return (
-    <DnDContext.Provider value={isDraggable ? { dispatch, dragStart } : {}}>
+    <DnDContext.Provider value={isDraggable ? { handlePointerDown } : {}}>
       <ul className={styles.dnd_container} ref={refComtainer} {...rest}>
         {children}
       </ul>
@@ -138,18 +126,19 @@ const Container: FC<
 };
 
 const Element: FC<
-  PropsWithChildren<HTMLAttributes<HTMLLIElement> & { index: number }>
+  PropsWithChildren<
+    Omit<HTMLAttributes<HTMLLIElement>, "id" | "onPointerDown"> & {
+      index: number;
+    }
+  >
 > = ({ children, ...rest }) => {
-  const { dispatch, dragStart } = useContext(DnDContext);
-
-  useEffect(() => {
-    if (dispatch === undefined) return;
-    dispatch(rest.index);
-  }, [dispatch]);
-
+  const { handlePointerDown } = useContext(DnDContext);
   return (
     <li
-      onPointerDown={dragStart ? (e) => dragStart(e, rest.index) : undefined}
+      id="dnd-element"
+      onPointerDown={
+        handlePointerDown ? (e) => handlePointerDown(e, rest.index) : undefined
+      }
       {...rest}
     >
       {children}

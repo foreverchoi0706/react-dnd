@@ -1,4 +1,12 @@
-import { Dispatch, PointerEvent } from "react";
+import { PointerEvent } from "react";
+
+export interface Response<T = unknown> {
+    status: number,
+    message: string,
+    data: T
+    requestTime: number,
+    completeTime: number
+}
 
 export interface CardData {
     cardId: number;
@@ -10,6 +18,5 @@ export interface CardData {
 export type DragAndDropHandler = (dragIndex: number, dropIndex: number) => void;
 
 export interface DnDContext {
-    dragStart?: (e: PointerEvent<HTMLLIElement>, index: number) => void;
-    dispatch?: Dispatch<number>;
+    handlePointerDown?: (e: PointerEvent<HTMLLIElement>, index: number) => void;
 }

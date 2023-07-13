@@ -15,7 +15,7 @@ const Card: FC<CardData & { isSortable: boolean }> = ({
         <h3 className={styles.card_contents_title}>{title}</h3>
         <p className={styles.card_contents_desc}>{desc}</p>
       </div>
-      {isSortable && <span className={styles.card_sort_btn}>🟰</span>}
+      {isSortable && <span className={styles.card_sortable_mark}>🟰</span>}
     </div>
   );
 };
