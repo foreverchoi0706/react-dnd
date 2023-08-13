@@ -59,7 +59,14 @@ const Home: FC = () => {
         )}
       </div>
       {isSortable ? (
-        <Button type="button" isFull onClick={() => console.log(userList)}>
+        <Button
+          type="button"
+          isFull
+          onClick={() => {
+            console.log(userList);
+            setIsSortable(false);
+          }}
+        >
           CONFIRM
         </Button>
       ) : (
