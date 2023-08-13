@@ -7,15 +7,4 @@ export default defineConfig({
   resolve: {
     alias: [{ find: "@", replacement: "/src" }],
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'https://test.elecvery.net/',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-        secure: false,
-        ws: true
-      }
-    }
-  }
 })
